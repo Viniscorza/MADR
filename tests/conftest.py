@@ -7,3 +7,13 @@ from madr.app import app
 @pytest.fixture
 def client():
     return TestClient(app)
+
+
+@pytest.fixture
+def livro():
+    return TestClient(app)
+
+
+@pytest.fixture
+def romancista():
+    return TestClient(app)

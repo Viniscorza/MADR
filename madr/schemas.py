@@ -28,9 +28,25 @@ class UserList(BaseModel):
 class LivroSchema(BaseModel):
     ano: str
     titulo: str
-    romancista_id: str
+    id_romancista: int
+
+
+class LivroDB(LivroSchema):
+    id: int
+
+
+class LivroList(BaseModel):
+    livros: list[LivroDB]
 
 
 class RomancistaSchema(BaseModel):
     nome: str
     livros: str
+
+
+class RomancistaDB(RomancistaSchema):
+    id: int
+
+
+class RomancistaList(BaseModel):
+    romancistas: list[RomancistaDB]
