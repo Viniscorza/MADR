@@ -64,7 +64,7 @@ def test_delete_user(client):
     response = client.delete('/users/1')
 
     # assert response.status_code == HTTPStatus.OK
-    assert response.json() == {'message': 'User deleted'}
+    assert response.json() == {'message': 'Conta deletada com sucesso'}
 
 
 def test_create_livro(livro):
@@ -127,7 +127,7 @@ def test_delete_livro(livro):
     response = livro.delete('/livros/1')
 
     # assert response.status_code == HTTPStatus.OK
-    assert response.json() == {'message': 'Livro deletado'}
+    assert response.json() == {'message': 'Livro deletado no MADR'}
 
 
 def test_create_romancista(romancista):
@@ -136,7 +136,6 @@ def test_create_romancista(romancista):
         json={
             'id': 1,
             'nome': 'vini scrz',
-            'livros': 'varios',
         },
     )
 
@@ -146,7 +145,6 @@ def test_create_romancista(romancista):
     assert response.json() == {
         'id': 1,
         'nome': 'vini scrz',
-        'livros': 'varios',
     }
 
 
@@ -159,7 +157,6 @@ def test_read_romancista(romancista):
             {
                 'id': 1,
                 'nome': 'vini scrz',
-                'livros': 'varios',
             }
         ]
     }
@@ -170,14 +167,12 @@ def test_update_romancista(romancista):
         '/romancistas/1',
         json={
             'nome': 'tirso tiriço',
-            'livros': 'muitos',
             'id': 1,
         },
     )
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {
         'nome': 'tirso tiriço',
-        'livros': 'muitos',
         'id': 1,
     }
 
@@ -186,4 +181,4 @@ def test_delete_romancista(romancista):
     response = romancista.delete('/romancistas/1')
 
     # assert response.status_code == HTTPStatus.OK
-    assert response.json() == {'message': 'Romancista deletado'}
+    assert response.json() == {'message': 'Romancista deletado no MADR'}

@@ -69,7 +69,7 @@ def delete_user(user_id: int):
 
     del database[user_id - 1]
 
-    return {'message': 'User deleted'}
+    return {'message': 'Conta deletada com sucesso'}
 
 
 @app.post('/livros/', status_code=HTTPStatus.CREATED, response_model=LivroDB)
@@ -89,7 +89,7 @@ def read_livro():
 @app.put('/livros/{livro_id}')
 def update_livro(livro_id: int, livro: LivroSchema):
     if livro_id < 1 or livro_id > len(datalivro):
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='Livro not found')
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='Livro não encontrado')
 
     livro_with_id = LivroDB(**livro.model_dump(), id=livro_id)
 
@@ -105,7 +105,7 @@ def delete_livro(livro_id: int):
 
     del datalivro[livro_id - 1]
 
-    return {'message': 'Livro deletado'}
+    return {'message': 'Livro deletado no MADR'}
 
 
 @app.post('/romancistas/', status_code=HTTPStatus.CREATED, response_model=RomancistaDB)
@@ -125,7 +125,7 @@ def read_romancista():
 @app.put('/romancistas/{romancista_id}')
 def update_romancistta(romancista_id: int, romancista: RomancistaSchema):
     if romancista_id < 1 or romancista_id > len(dataromancista):
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='Romancista not found')
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='Romancista não encontrado')
 
     romancista_with_id = RomancistaDB(**romancista.model_dump(), id=romancista_id)
 
@@ -141,4 +141,4 @@ def delete_romancista(romancista_id: int):
 
     del dataromancista[romancista_id - 1]
 
-    return {'message': 'Romancista deletado'}
+    return {'message': 'Romancista deletado no MADR'}

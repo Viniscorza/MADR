@@ -41,7 +41,6 @@ class LivroList(BaseModel):
 
 class RomancistaSchema(BaseModel):
     nome: str
-    livros: str
 
 
 class RomancistaDB(RomancistaSchema):
