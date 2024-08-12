@@ -1,7 +1,11 @@
 from http import HTTPStatus
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
+from madr.database import get_session
+from madr.models import Livro, Romancista, User
 from madr.schemas import (
     LivroDB,
     LivroList,
@@ -10,7 +14,6 @@ from madr.schemas import (
     RomancistaDB,
     RomancistaList,
     RomancistaSchema,
-    UserDB,
     UserList,
     UserPublic,
     UserSchema,
@@ -21,10 +24,6 @@ from madr.schemas import (
 # from fastapi.responses import HTMLResponse
 
 app = FastAPI()
-
-database = []
-datalivro = []
-dataromancista = []
 
 # app.include_router(users.router)
 # app.include_router(auth.router)
@@ -37,108 +36,165 @@ def read_root():
 
 
 @app.post('/users/', status_code=HTTPStatus.CREATED, response_model=UserPublic)
-def create_user(user: UserSchema):
-    user_with_id = UserDB(**user.model_dump(), id=len(database) + 1)
+def create_user(user: UserSchema, session: Session = Depends(get_session)):
+    db_user = session.scalar(
+        select(User).where((User.username == user.username) | (User.email == user.email))
+    )
 
-    database.append(user_with_id)
+    if db_user:
+        if db_user.username == user.username:
+            raise HTTPException(
+                status_code=HTTPStatus.BAD_REQUEST,
+                detail='Username already exists',
+            )
+        elif db_user.email == user.email:
+            raise HTTPException(
+                status_code=HTTPStatus.BAD_REQUEST,
+                detail='Email already exists',
+            )
 
-    return user_with_id
+    db_user = User(username=user.username, password=user.password, email=user.email)
+    session.add(db_user)
+    session.commit()
+    session.refresh(db_user)
+
+    return db_user
 
 
 @app.get('/users/', response_model=UserList)
-def read_user():
-    return {'users': database}
+def read_users(skip: int = 0, limit: int = 100, session: Session = Depends(get_session)):
+    users = session.scalars(select(User).offset(skip).limit(limit)).all()
+    return {'users': users}
 
 
 @app.put('/users/{user_id}', response_model=UserPublic)
-def update_user(user_id: int, user: UserSchema):
-    if user_id < 1 or user_id > len(database):
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='User not found')
+def update_user(user_id: int, user: UserSchema, session: Session = Depends(get_session)):
+    db_user = session.scalar(select(User).where(User.id == user_id))
+    if not db_user:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='Conta não encontrada')
 
-    user_with_id = UserDB(**user.model_dump(), id=user_id)
+    db_user.username = user.username
+    db_user.password = user.password
+    db_user.email = user.email
+    session.commit()
+    session.refresh(db_user)
 
-    database[user_id - 1] = user_with_id
-
-    return user_with_id
+    return db_user
 
 
 @app.delete('/users/{user_id}', response_model=Message)
-def delete_user(user_id: int):
-    if user_id < 1 or user_id > len(database):
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='User not found')
+def delete_user(user_id: int, session: Session = Depends(get_session)):
+    db_user = session.scalar(select(User).where(User.id == user_id))
 
-    del database[user_id - 1]
+    if not db_user:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='Conta não encontrada')
+
+    session.delete(db_user)
+    session.commit()
 
     return {'message': 'Conta deletada com sucesso'}
 
 
 @app.post('/livros/', status_code=HTTPStatus.CREATED, response_model=LivroDB)
-def create_livro(livro: LivroSchema):
-    livro_with_id = LivroDB(**livro.model_dump(), id=len(datalivro) + 1)
+def create_livro(livro: LivroSchema, session: Session = Depends(get_session)):
+    db_livro = session.scalar(select(Livro).where(Livro.titulo == livro.titulo))
 
-    datalivro.append(livro_with_id)
+    if db_livro:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail='Livro já cadastrado no MADR',
+        )
 
-    return livro_with_id
+    db_livro = Livro(titulo=livro.titulo, ano=livro.ano, id_romancista=livro.id_romancista)
+
+    session.add(db_livro)
+    session.commit()
+    session.refresh(db_livro)
+
+    return db_livro
 
 
 @app.get('/livros/', response_model=LivroList)
-def read_livro():
-    return {'livros': datalivro}
+def read_livro(skip: int = 0, limit: int = 100, session: Session = Depends(get_session)):
+    livros = session.scalars(select(Livro).offset(skip).limit(limit)).all()
+    return {'livros': livros}
 
 
-@app.put('/livros/{livro_id}')
-def update_livro(livro_id: int, livro: LivroSchema):
-    if livro_id < 1 or livro_id > len(datalivro):
+@app.put('/livros/{livro_id}', response_model=LivroDB)
+def update_livro(livro_id: int, livro: LivroSchema, session: Session = Depends(get_session)):
+    db_livro = session.scalar(select(Livro).where(Livro.id == livro_id))
+    if not db_livro:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='Livro não encontrado')
 
-    livro_with_id = LivroDB(**livro.model_dump(), id=livro_id)
+    db_livro.ano = livro.ano
+    db_livro.titulo = livro.titulo
+    db_livro.id_romancista = livro.id_romancista
+    session.commit()
+    session.refresh(db_livro)
 
-    datalivro[livro_id - 1] = livro_with_id
-
-    return livro_with_id
+    return db_livro
 
 
 @app.delete('/livros/{livro_id}', response_model=Message)
-def delete_livro(livro_id: int):
-    if livro_id < 1 or livro_id > len(datalivro):
+def delete_livro(livro_id: int, session: Session = Depends(get_session)):
+    db_livro = session.scalar(select(Livro).where(Livro.id == livro_id))
+
+    if not db_livro:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='Livro não encontrado')
 
-    del datalivro[livro_id - 1]
+    session.delete(db_livro)
+    session.commit()
 
     return {'message': 'Livro deletado no MADR'}
 
 
 @app.post('/romancistas/', status_code=HTTPStatus.CREATED, response_model=RomancistaDB)
-def create_romancista(romancista: RomancistaSchema):
-    romancista_with_id = RomancistaDB(**romancista.model_dump(), id=len(dataromancista) + 1)
+def create_romancista(romancista: RomancistaSchema, session: Session = Depends(get_session)):
+    db_romancista = session.scalar(select(Romancista).where(Romancista.nome == romancista.nome))
 
-    dataromancista.append(romancista_with_id)
+    if db_romancista:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail='Romancista já cadastrado no MADR',
+        )
 
-    return romancista_with_id
+    db_romancista = Romancista(nome=romancista.nome)
+
+    session.add(db_romancista)
+    session.commit()
+    session.refresh(db_romancista)
+
+    return db_romancista
 
 
 @app.get('/romancistas/', response_model=RomancistaList)
-def read_romancista():
-    return {'romancistas': dataromancista}
+def read_romancista(skip: int = 0, limit: int = 100, session: Session = Depends(get_session)):
+    romancistas = session.scalars(select(Romancista).offset(skip).limit(limit)).all()
+    return {'romancistas': romancistas}
 
 
-@app.put('/romancistas/{romancista_id}')
-def update_romancistta(romancista_id: int, romancista: RomancistaSchema):
-    if romancista_id < 1 or romancista_id > len(dataromancista):
+@app.put('/romancistas/{romancista_id}', response_model=RomancistaDB)
+def update_romancistta(
+    romancista_id: int, romancista: RomancistaSchema, session: Session = Depends(get_session)
+):
+    db_romancista = session.scalar(select(Romancista).where(Romancista.id == romancista_id))
+    if not db_romancista:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='Romancista não encontrado')
 
-    romancista_with_id = RomancistaDB(**romancista.model_dump(), id=romancista_id)
+    db_romancista.nome = romancista.nome
+    session.commit()
+    session.refresh(db_romancista)
 
-    dataromancista[romancista_id - 1] = romancista_with_id
-
-    return romancista_with_id
+    return db_romancista
 
 
 @app.delete('/romancistas/{romancista_id}', response_model=Message)
-def delete_romancista(romancista_id: int):
-    if romancista_id < 1 or romancista_id > len(dataromancista):
+def delete_romancista(romancista_id: int, session: Session = Depends(get_session)):
+    db_romancista = session.scalar(select(Romancista).where(Romancista.id == romancista_id))
+
+    if not db_romancista:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='Romancista não encontrado')
 
-    del dataromancista[romancista_id - 1]
-
+    session.delete(db_romancista)
+    session.commit()
     return {'message': 'Romancista deletado no MADR'}
