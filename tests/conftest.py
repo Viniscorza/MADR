@@ -7,6 +7,7 @@ from sqlalchemy.pool import StaticPool
 from madr.app import app
 from madr.database import get_session
 from madr.models import Livro, Romancista, User, table_registry
+from madr.security import get_password_hash
 
 
 @pytest.fixture
@@ -42,10 +43,16 @@ def client(session):
 
 @pytest.fixture
 def user(session):
-    user = User(username='Teste', email='teste@test.com', password='testtest')
+    user = User(
+        username='Teste',
+        email='teste@test.com',
+        password=get_password_hash('testtest'),
+    )
     session.add(user)
     session.commit()
     session.refresh(user)
+
+    user.clean_password = 'testtest'
 
     return user
 
@@ -68,3 +75,12 @@ def romancista(session):
     session.refresh(romancista)
 
     return romancista
+
+
+@pytest.fixture
+def token(client, user):
+    response = client.post(
+        '/token',
+        data={'username': user.email, 'password': user.clean_password},
+    )
+    return response.json()['access_token']

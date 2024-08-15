@@ -52,3 +52,12 @@ class RomancistaDB(RomancistaSchema):
 
 class RomancistaList(BaseModel):
     romancistas: list[RomancistaDB]
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    username: str | None = None
